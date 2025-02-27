@@ -1,3 +1,11 @@
+# IDE
+.idea/
+.vscode/
+
+# CMake build
+cmake-build-*
+build-*
+
 # C++ objects and libs
 *.slo
 *.lo
