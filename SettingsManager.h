@@ -5,11 +5,17 @@
 #include <QVariant>
 #include <QMutexLocker>
 
+// Switch between saved value and default
+struct KeyConfig {
+  QString key;
+  QVariant defaultValue;
+};
 
 enum class KeyMapAPP {
   Theme, Language,
   // add more keys if needed ...
 };
+
 
 enum class KeyMapFTP {
   FtpServerHost, FtpServerPort, FtpServerPassword, FtpServerUserName,
@@ -23,6 +29,8 @@ enum class FactoryDefaultsFTP {
 enum class FactoryDefaultsAPP {
   Theme_Def, Language_Def,
 };
+
+
 
 /*!
  *  @brief    Settings Manager for QSettings
@@ -47,8 +55,11 @@ public:
   template <typename T> static QVariant load(T key);
 
   // -- KeyMaps (need to be public)
-  static const QMap<KeyMapAPP, QString> keymapAPP;
-  static const QMap<KeyMapFTP, QString> keymapFTP;
+  static const QMap<KeyMapAPP, KeyConfig> keymapAPP;
+  static const QMap<KeyMapFTP, KeyConfig> keymapFTP;
+  // static const QMap<KeyMapAPP, QString> keymapAPP;
+  // static const QMap<KeyMapFTP, QString> keymapFTP;
+
 
   static const QMap<FactoryDefaultsAPP, QVariant> factoryDefaultsAPP;
   static const QMap<FactoryDefaultsFTP, QVariant> factoryDefaultsFTP;
@@ -58,7 +69,7 @@ private:
   template <typename T> static QString getKeyString(T key);
 
   // -- Helper to get factory default key (if key value is empty)
-  template <typename T> static QString getFactoryDefaultValue(T key);
+  template <typename T> static QVariant getFactoryDefaultValue(T key);
 
   // -- Helpers for fallback  save/load
   static bool saveFallback(const QString &value, const QString &filename);

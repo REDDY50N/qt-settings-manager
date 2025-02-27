@@ -8,19 +8,36 @@
 // ----------------------------------------------
 // KEY MAP - APP
 // ----------------------------------------------
+#ifndef OLD
+const QMap<KeyMapAPP, KeyConfig> SettingsManager::keymapAPP = {
+  {KeyMapAPP::Theme, {"App/Theme", "Light"}},
+  {KeyMapAPP::Language, {"App/Language", "German"}}
+};
+#else
 const QMap<KeyMapAPP, QString> SettingsManager::keymapAPP = {
     {KeyMapAPP::Theme, "App/Theme"},
-  {KeyMapAPP::Language, "App/Language"}};
+    {KeyMapAPP::Language, "App/Language"}};
+#endif
 
 // ----------------------------------------------
 // KEY MAP - FTP
 // ----------------------------------------------
-const QMap<KeyMapFTP, QString> SettingsManager::keymapFTP = {
-    {KeyMapFTP::FtpServerHost, "FTP/ServerHost"},
-    {KeyMapFTP::FtpServerPort, "FTP/ServerPort"},
-    {KeyMapFTP::FtpServerUserName, "FTP/UserName"},
-    {KeyMapFTP::FtpServerPassword, "FTP/Password"},
+#ifndef OLD
+// KEY MAP - FTP
+const QMap<KeyMapFTP, KeyConfig> SettingsManager::keymapFTP = {
+  {KeyMapFTP::FtpServerHost, {"FTP/ServerHost", "ftp.dlptest.com"}},
+  {KeyMapFTP::FtpServerPort, {"FTP/ServerPort", 21}},
+  {KeyMapFTP::FtpServerUserName, {"FTP/UserName", "dlpuser"}},
+  {KeyMapFTP::FtpServerPassword, {"FTP/Password", "rNrKYTX9g7z3RgJRmxWuGHbeu"}}
 };
+#else
+const QMap<KeyMapFTP, QString> SettingsManager::keymapFTP = {
+  {KeyMapFTP::FtpServerHost, "FTP/ServerHost"},
+  {KeyMapFTP::FtpServerPort, "FTP/ServerPort"},
+  {KeyMapFTP::FtpServerUserName, "FTP/UserName"},
+  {KeyMapFTP::FtpServerPassword, "FTP/Password"},
+};
+#endif
 
 // ----------------------------------------------
 // FACTORY DEFAULTS - APP
@@ -135,8 +152,14 @@ template <typename T> QVariant SettingsManager::load(T key) {
     // -- Use factory default there is no fallback
     if (value.isNull() || value.toString().isEmpty()) {
 
-      const QString& keyStringDef = getFactoryDefaultValue(key+ "_Def");
-      value = settings.value(keyStringDef);
+      if (value.isNull() || value.toString().isEmpty()) {
+        // Fallback laden
+        const QVariant& defaultValue = getFactoryDefaultValue(key);
+        if (!defaultValue.isNull()) {
+          value = defaultValue;
+        }
+      }
+
 
       qWarning()
           << "SETTINGS: No valid settings found. Using factory default - Key:"
@@ -155,7 +178,21 @@ template <typename T> QVariant SettingsManager::load(T key) {
 // ----------------------------------------------
 // HELPER - GET KEY STRING
 // ----------------------------------------------
-template <typename T> QString SettingsManager::getKeyString(T key) {
+#ifndef OLD
+template <typename T>
+QString SettingsManager::getKeyString(T key) {
+  if constexpr (std::is_same_v<T, KeyMapFTP>) {
+    return keymapFTP.value(key).key;
+  } else if constexpr (std::is_same_v<T, KeyMapAPP>) {
+    return keymapAPP.value(key).key;
+  }
+
+  // -- Fallback: Should not be reached
+  return {};
+}
+#else
+template <typename T>
+QString SettingsManager::getKeyString(T key) {
   if constexpr (std::is_same_v<T, KeyMapFTP>) {
     return keymapFTP.value(key);
   } else if constexpr (std::is_same_v<T, KeyMapAPP>) {
@@ -165,9 +202,25 @@ template <typename T> QString SettingsManager::getKeyString(T key) {
   // -- Fallback: Should not be reached
   return {};
 }
+#endif
 
 // ----------------------------------------------
 // HELPER - GET FACTORY DEFAULT VALUE
+// ----------------------------------------------
+#ifndef OLD
+// HELPER - GET FACTORY DEFAULT VALUE
+template <typename T>
+QVariant SettingsManager::getFactoryDefaultValue(T key) {
+  if constexpr (std::is_same_v<T, FactoryDefaultsFTP>) {
+    return keymapFTP.value(static_cast<KeyMapFTP>(key)).defaultValue;
+  } else if constexpr (std::is_same_v<T, FactoryDefaultsAPP>) {
+    return keymapAPP.value(static_cast<KeyMapAPP>(key)).defaultValue;
+  }
+
+  // -- Fallback: Should not be reached
+  return {};
+}
+#else
 template <typename T> QString SettingsManager::getFactoryDefaultValue(T key) {
   if constexpr (std::is_same_v<T, FactoryDefaultsFTP>) {
     qWarning() << "SETTINGS: Load factory defaults for key:" << key << "Value:" << factoryDefaultsFTP.value(key);
@@ -180,6 +233,7 @@ template <typename T> QString SettingsManager::getFactoryDefaultValue(T key) {
   // -- Fallback: Should not be reached
   return {};
 }
+#endif
 
 // ----------------------------------------------
 // HELPER - SAVE FALLBACK
