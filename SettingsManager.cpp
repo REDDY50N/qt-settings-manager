@@ -8,86 +8,45 @@
 // ----------------------------------------------
 // KEY MAP - APP
 // ----------------------------------------------
-#ifndef OLD
 const QMap<KeyMapAPP, KeyConfig> SettingsManager::keymapAPP = {
-  {KeyMapAPP::Theme, {"App/Theme", "Light"}},
-  {KeyMapAPP::Language, {"App/Language", "German"}}
+  { KeyMapAPP::Theme, { "App/Theme", "Light" } },
+  { KeyMapAPP::Language, { "App/Language", "German" } }
 };
-#else
-const QMap<KeyMapAPP, QString> SettingsManager::keymapAPP = {
-    {KeyMapAPP::Theme, "App/Theme"},
-    {KeyMapAPP::Language, "App/Language"}};
-#endif
 
 // ----------------------------------------------
 // KEY MAP - FTP
 // ----------------------------------------------
-#ifndef OLD
-// KEY MAP - FTP
 const QMap<KeyMapFTP, KeyConfig> SettingsManager::keymapFTP = {
-  {KeyMapFTP::FtpServerHost, {"FTP/ServerHost", "ftp.dlptest.com"}},
-  {KeyMapFTP::FtpServerPort, {"FTP/ServerPort", 21}},
-  {KeyMapFTP::FtpServerUserName, {"FTP/UserName", "dlpuser"}},
-  {KeyMapFTP::FtpServerPassword, {"FTP/Password", "rNrKYTX9g7z3RgJRmxWuGHbeu"}}
+  { KeyMapFTP::FtpServerHost, { "FTP/ServerHost", "ftp.dlptest.com" } },
+  { KeyMapFTP::FtpServerPort, { "FTP/ServerPort", 21 } },
+  { KeyMapFTP::FtpServerUserName, { "FTP/UserName", "dlpuser" } },
+  { KeyMapFTP::FtpServerPassword, { "FTP/Password", "rNrKYTX9g7z3RgJRmxWuGHbeu" } }
 };
-#else
-const QMap<KeyMapFTP, QString> SettingsManager::keymapFTP = {
-  {KeyMapFTP::FtpServerHost, "FTP/ServerHost"},
-  {KeyMapFTP::FtpServerPort, "FTP/ServerPort"},
-  {KeyMapFTP::FtpServerUserName, "FTP/UserName"},
-  {KeyMapFTP::FtpServerPassword, "FTP/Password"},
-};
-#endif
 
-// ----------------------------------------------
-// FACTORY DEFAULTS - APP
-// ----------------------------------------------
-const QMap<FactoryDefaultsAPP, QVariant> SettingsManager::factoryDefaultsAPP = {
-    {FactoryDefaultsAPP::Theme_Def, "Light"},
-    {FactoryDefaultsAPP::Language_Def, "German"}};
-
-// ----------------------------------------------
-// FACTORY DEFAULTS - FTP
-// ----------------------------------------------
-const QMap<FactoryDefaultsFTP, QVariant> SettingsManager::factoryDefaultsFTP = {
-    {FactoryDefaultsFTP::FtpServerHost_Def, "ftp.dlptest.com"},
-    {FactoryDefaultsFTP::FtpServerPort_Def, 21},
-    {FactoryDefaultsFTP::FtpServerUserName_Def, "dlpuser"},
-    {FactoryDefaultsFTP::FtpServerPassword_Def,
-     "rNrKYTX9g7z3RgJRmxWuGHbeu"}, // HINT: paddword should by decoded .i.e. as
-                                   // QByteArray
-};
 
 // ----------------------------------------------
 // SAVE SETTINGS
 // ----------------------------------------------
 template <typename T>
-bool SettingsManager::save(T key, const QVariant &value,
-                           const bool fallbackFile) {
-  static_assert(std::is_same_v<T, KeyMapFTP> || std::is_same_v<T, KeyMapAPP>,
-                "SETTINGS: Invalid key type");
+bool SettingsManager::save(T key, const QVariant& value, const bool fallbackFile) {
 
+  // -- Check if a valid keymap was passed
+  // HINT: Maybe use a helper function if using many keys maps
+  static_assert(std::is_same_v<T, KeyMapFTP> || std::is_same_v<T, KeyMapAPP>, "SETTINGS: Invalid key type");
+
+  // -- Invoke helper to get key string from map
   const QString keyString = getKeyString(key);
-  // qInfo() << "SETTINGS:" << keyString << fallbackFile << value;
 
-  // -- Load the given config file path
-  QString configFilePath{};
-  if constexpr (std::is_same_v<T, KeyMapAPP>) {
-    configFilePath = m_configPathAPP;
-  } else if constexpr (std::is_same_v<T, KeyMapFTP>) {
-    configFilePath = m_configPathFTP;
-  }
+  // -- Load the config file path for this map
+  const QString configFilePath = getConfigFilePath<T>();
 
   // -- Initialize QSettings
-  // HINT: Native - Store the settings in a platform dependent location / Ini -
-  // Store the settings in a text file
-  QSettings settings{configFilePath, QSettings::IniFormat};
+  // HINT: Native - Store the settings in a platform dependent location / Ini - Store the settings in a text file
+  QSettings settings{ configFilePath, QSettings::IniFormat };
 
   // -- Empty key error check
   if (keyString.isEmpty()) {
-    qWarning()
-        << "SETTINGS: Invalid key! Does not exists in settings keymap! Key:"
-        << keyString;
+    qWarning() << "SETTINGS: Invalid key! Does not exists in settings keymap! Key:" << keyString;
     return false;
   }
 
@@ -98,16 +57,13 @@ bool SettingsManager::save(T key, const QVariant &value,
     settings.setValue(keyString, value);
 
     // -- Debug message
-    qInfo() << "SETTINGS: Saved Key:" << keyString
-            << " Value:" << settings.value(keyString).toString()
-            << "File:" << configFilePath;
+    qInfo() << "SETTINGS: Saved Key:" << keyString << " Value:" << settings.value(keyString).toString() << "File:" << configFilePath;
 
     // -- Save as fallback in file (keyname = filename)
     if (fallbackFile)
       saveFallback(value.toString(), keyString.mid(keyString.indexOf("/")));
   } else {
-    qInfo() << "SETTINGS: No change for Key:" << keyString
-            << "Save fallback:" << fallbackFile;
+    qInfo() << "SETTINGS: No change for Key:" << keyString << "Save fallback:" << fallbackFile;
   }
 
   // -- return if no error
@@ -117,58 +73,49 @@ bool SettingsManager::save(T key, const QVariant &value,
 // ----------------------------------------------
 // LOAD SETTINGS
 // ----------------------------------------------
-template <typename T> QVariant SettingsManager::load(T key) {
-  static_assert(std::is_same_v<T, KeyMapFTP> || std::is_same_v<T, KeyMapAPP>,
-                "SETTINGS: Invalid key type");
+template <typename T>
+QVariant SettingsManager::load(T key) {
 
-  // -- Get the keymap's key string
+  // -- Check if a valid keymap was passed
+  // HINT: Maybe use a helper function if using many keys maps
+  static_assert(std::is_same_v<T, KeyMapFTP> || std::is_same_v<T, KeyMapAPP>, "SETTINGS: Invalid key type");
+
+  // -- Invoke helper to get key string from map
   const QString& keyString = getKeyString(key);
 
-  // -- Set config file path depending on KeyMap
-  QString configFilePath{};
-  if constexpr (std::is_same_v<T, KeyMapAPP>) {
-    configFilePath = m_configPathAPP;
-  } else if constexpr (std::is_same_v<T, KeyMapFTP>) {
-    configFilePath = m_configPathFTP;
-  }
+  // -- Load the config file path for this map
+  const QString configFilePath = getConfigFilePath<T>();
 
   // -- Initialize QSettings
-  const QSettings settings{configFilePath, QSettings::IniFormat};
+  const QSettings settings{ configFilePath, QSettings::IniFormat };
 
   // -- Check if key exists and is not empty
   QVariant value = settings.value(keyString);
 
   // -- Load fallback if empty
   if (value.isNull() || value.toString().isEmpty()) {
-    // const QString fallbackValue = loadFallback(key);
-    qWarning() << "SETTINGS: Key" << keyString
-               << "not found or value is empty. Try to load fallback!";
-    const QString fallbackValue =
-        loadFallback(keyString.mid(keyString.indexOf("/") + 1));
+    qWarning() << "SETTINGS: Key" << keyString << "not found or value is empty. Try to load fallback!";
 
-    // -- Convert to QVariant for consitency
+    // -- Try to load fallback
+    const QString fallbackValue = loadFallback(keyString.mid(keyString.indexOf("/") + 1));
+
+    // -- Convert to QVariant (for consistance=
     value = QVariant(fallbackValue);
 
-    // -- Use factory default there is no fallback
+    // -- Use factory default (last option)
     if (value.isNull() || value.toString().isEmpty()) {
+      qWarning() << "SETTINGS: Key" << keyString << "not found. Using default value.";
 
-      if (value.isNull() || value.toString().isEmpty()) {
-        // Fallback laden
-        const QVariant& defaultValue = getFactoryDefaultValue(key);
-        if (!defaultValue.isNull()) {
-          value = defaultValue;
-        }
+      if constexpr (std::is_same_v<T, KeyMapAPP>) {
+        value = keymapAPP.value(key).defaultValue;
+      } else if constexpr (std::is_same_v<T, KeyMapFTP>) {
+        value = keymapFTP.value(key).defaultValue;
       }
-
-
-      qWarning()
-          << "SETTINGS: No valid settings found. Using factory default - Key:"
-          << keyString << "Value:" << value;
     }
   }
 
-  qInfo() << "SETTINGS: Loaded Key:" << keyString
-          << "Value:" << value.toByteArray() << "File:" << configFilePath;
+
+  qInfo() << "SETTINGS: Loaded Key:" << keyString << "Value:" << value.toByteArray() << "File:" << configFilePath;
   // ------------------------------------------
 
   // -- Return values as QVariant
@@ -178,7 +125,6 @@ template <typename T> QVariant SettingsManager::load(T key) {
 // ----------------------------------------------
 // HELPER - GET KEY STRING
 // ----------------------------------------------
-#ifndef OLD
 template <typename T>
 QString SettingsManager::getKeyString(T key) {
   if constexpr (std::is_same_v<T, KeyMapFTP>) {
@@ -187,77 +133,44 @@ QString SettingsManager::getKeyString(T key) {
     return keymapAPP.value(key).key;
   }
 
-  // -- Fallback: Should not be reached
-  return {};
+  return {}; // Fallback: Should not be reached
 }
-#else
-template <typename T>
-QString SettingsManager::getKeyString(T key) {
-  if constexpr (std::is_same_v<T, KeyMapFTP>) {
-    return keymapFTP.value(key);
-  } else if constexpr (std::is_same_v<T, KeyMapAPP>) {
-    return keymapAPP.value(key);
-  }
-
-  // -- Fallback: Should not be reached
-  return {};
-}
-#endif
 
 // ----------------------------------------------
-// HELPER - GET FACTORY DEFAULT VALUE
+// HELPER - GET QSETTINGS CONFIG FILE PATH
 // ----------------------------------------------
-#ifndef OLD
-// HELPER - GET FACTORY DEFAULT VALUE
-template <typename T>
-QVariant SettingsManager::getFactoryDefaultValue(T key) {
-  if constexpr (std::is_same_v<T, FactoryDefaultsFTP>) {
-    return keymapFTP.value(static_cast<KeyMapFTP>(key)).defaultValue;
-  } else if constexpr (std::is_same_v<T, FactoryDefaultsAPP>) {
-    return keymapAPP.value(static_cast<KeyMapAPP>(key)).defaultValue;
+template <typename TYPE>
+QString SettingsManager::getConfigFilePath() {
+  static_assert(std::is_same_v<TYPE, KeyMapAPP> || std::is_same_v<TYPE, KeyMapFTP>, "SETTINGS: Invalid keymap for config path");
+
+  if constexpr (std::is_same_v<TYPE, KeyMapAPP>) {
+    return m_configPathAPP;
+  } else if constexpr (std::is_same_v<TYPE, KeyMapFTP>) {
+    return m_configPathFTP;
   }
 
-  // -- Fallback: Should not be reached
-  return {};
+  return{}; // Fallback: Should not be reached
 }
-#else
-template <typename T> QString SettingsManager::getFactoryDefaultValue(T key) {
-  if constexpr (std::is_same_v<T, FactoryDefaultsFTP>) {
-    qWarning() << "SETTINGS: Load factory defaults for key:" << key << "Value:" << factoryDefaultsFTP.value(key);
-    return factoryDefaultsFTP.value(key);
-  } else if constexpr (std::is_same_v<T, FactoryDefaultsAPP>) {
-    qWarning() << "SETTINGS: Load factory defaults for key:" << key <<"Value:" << factoryDefaultsAPP.value(key);
-    return factoryDefaultsAPP.value(key);
-  }
-
-  // -- Fallback: Should not be reached
-  return {};
-}
-#endif
 
 // ----------------------------------------------
 // HELPER - SAVE FALLBACK
 // ----------------------------------------------
-bool SettingsManager::saveFallback(const QString &value,
-                                   const QString &filename) {
+bool SettingsManager::saveFallback(const QString& value, const QString& filename) {
   // -- Write value into fallback file
   const QDir dir(m_fallbackPath);
   if (!dir.exists() && !dir.mkpath(".")) {
-    qWarning() << "SETTINGS: Could not create default fallback dir:"
-               << m_fallbackPath;
+    qWarning() << "SETTINGS: Could not create default fallback dir:" << m_fallbackPath;
     return false;
   }
 
   // -- Check path exists
   QFile file(dir.filePath(m_fallbackPath + filename));
   if (!file.open(QIODevice::WriteOnly)) {
-    qWarning() << "SETTINGS: Could not open file to write:"
-               << m_fallbackPath + filename;
+    qWarning() << "SETTINGS: Could not open file to write:" << m_fallbackPath + filename;
     return false;
   }
 
-  qInfo() << "SETTINGS: Fallback value saved:" << value
-          << QString("File: %1.conf").arg(m_fallbackPath + filename);
+  qInfo() << "SETTINGS: Fallback value saved:" << value << QString("File: %1.conf").arg(m_fallbackPath + filename);
   // qInfo() << "SETTINGS: Saving into fallback file:" << filename << "Data:" <<
   // value;
   file.write(value.toUtf8().trimmed());
@@ -268,22 +181,20 @@ bool SettingsManager::saveFallback(const QString &value,
 // ----------------------------------------------
 // HELPER - LOAD FALLBACK
 // ----------------------------------------------
-QString SettingsManager::loadFallback(const QString &filename) {
+QString SettingsManager::loadFallback(const QString& filename) {
   const QString filepath = m_fallbackPath + filename;
   QFile file(filepath);
 
   if (!file.open(QIODevice::ReadOnly)) {
     // TODO: Check only fallback option was set
-    qWarning() << "SETTINGS: Could not open file to read:" << filepath
-               << "Error:" << file.errorString();
+    qWarning() << "SETTINGS: Could not open file to read:" << filepath << "Error:" << file.errorString();
     return "";
   }
 
   QString value = file.readAll();
   file.close();
 
-  qInfo() << "SETTINGS: Fallback value loaded:" << value << "Key:" << filename
-          << QString("File: %1.conf").arg(filename);
+  qInfo() << "SETTINGS: Fallback value loaded:" << value << "Key:" << filename << QString("File: %1.conf").arg(filename);
 
 #ifdef WRITE_TO_QSETTINGS_FILE
   QSettings settings("/data/config/defaults/config.ini", QSettings::IniFormat);
@@ -294,22 +205,13 @@ QString SettingsManager::loadFallback(const QString &filename) {
 }
 
 // ----------------------------------------------
-// EXPLICIT INSTANTIATION FOR PNET & APP TEMPLATE
+// EXPLICIT TEMPLATE INSTANTIATION
 // ----------------------------------------------
-// Make the Linker happy, avoid errors like:
-// undefined reference to `bool SettingsManager::save<KeyMapFTP>(KeyMapFTP,
-// QVariant const&, bool)` Explizite Instanziierung für KeyMapFTP und KeyMapAPP
-// Die Fehler entstehen, weil die Template-Implementierungen in der .cpp-Datei
-// nicht für die verwendeten Typen (KeyMapFTP, KeyMapAPP) instanziiert werden.
-// Durch eine der beiden Lösungen wird sichergestellt, dass der Linker die
-// benötigten Funktionen findet.
+// Explicit instantiation to make the Linker happy by avoiding undefined reference errors
+// Needs to be done for each key map with load and save function
+//
+template bool SettingsManager::save<KeyMapFTP>(KeyMapFTP, const QVariant&, bool);
+template bool SettingsManager::save<KeyMapAPP>(KeyMapAPP, const QVariant&, bool);
 
-template bool SettingsManager::save<KeyMapFTP>(KeyMapFTP, const QVariant &,
-                                               bool);
 template QVariant SettingsManager::load<KeyMapFTP>(KeyMapFTP);
-template QString SettingsManager::getKeyString<KeyMapFTP>(KeyMapFTP);
-
-template bool SettingsManager::save<KeyMapAPP>(KeyMapAPP, const QVariant &,
-                                               bool);
 template QVariant SettingsManager::load<KeyMapAPP>(KeyMapAPP);
-template QString SettingsManager::getKeyString<KeyMapAPP>(KeyMapAPP);
